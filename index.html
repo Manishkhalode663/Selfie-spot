@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selfie Spot - Portrait Collage Maker</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Selfie Spot</h1>
+    <p>Take 3 selfies to create your portrait collage</p>
+
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <button id="captureBtn">Capture Selfie</button>
+    <button id="resetBtn">Reset</button>
+
+    <div class="preview-container" id="previewContainer"></div>
+
+    <button id="generateBtn" disabled>Generate Collage</button>
+
+    <div class="collage-container">
+        <img id="collage" style="display: none;">
+    </div>
+
+    <button id="downloadBtn" style="display: none;">Download  </button>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const collage = document.getElementById('collage');
+
+        let capturedImages = [];
+
+        // Access camera
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(error => {
+                    console.error("Camera access error:", error);
+                    alert("Could not access the camera. Please ensure you've granted camera permissions.");
+                });
+        }
+
+        // Capture image
+        captureBtn.addEventListener('click', () => {
+            if (capturedImages.length >= 3) {
+                alert("You've already captured 3 images. Please reset to start over.");
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/png');
+            capturedImages.push(imageData);
+
+            // Display preview
+            const img = document.createElement('img');
+            img.src = imageData;
+            img.className = 'preview-image';
+            previewContainer.appendChild(img);
+
+            // Enable generate button when 3 images are captured
+            if (capturedImages.length === 3) {
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Reset all images
+        resetBtn.addEventListener('click', () => {
+            capturedImages = [];
+            previewContainer.innerHTML = '';
+            collage.style.display = 'none';
+            generateBtn.disabled = true;
+        });
+
+        // Generate collage
+        // Layout options configuration
+        const layoutOptions = {
+            1: { // Portrait Layout
+                draw: (ctx, images) => {
+                    ctx.drawImage(images[0], 50, 50, 700, 400);
+                    ctx.drawImage(images[1], 150, 500, 250, 250);
+                    ctx.drawImage(images[2], 450, 500, 250, 250);
+                },
+                frame: (ctx) => {
+                    ctx.strokeStyle = '#0056b3';
+                    ctx.lineWidth = 15;
+                    ctx.strokeRect(25, 25, 750, 950);
+                }
+            },
+            2: { // Grid Layout
+                draw: (ctx, images) => {
+                    ctx.drawImage(images[0], 50, 50, 300, 300);
+                    ctx.drawImage(images[1], 450, 50, 300, 300);
+                    ctx.drawImage(images[2], 250, 400, 300, 300);
+                },
+                frame: (ctx) => {
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 10;
+                    ctx.strokeRect(40, 40, 720, 720);
+                }
+            },
+            3: { // Diagonal Layout
+                draw: (ctx, images) => {
+                    ctx.drawImage(images[0], 100, 100, 300, 300);
+                    ctx.drawImage(images[1], 300, 400, 300, 300);
+                    ctx.drawImage(images[2], 500, 700, 300, 300);
+                },
+                frame: (ctx) => {
+                    ctx.strokeStyle = '#4CAF50';
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(50, 50);
+                    ctx.lineTo(750, 50);
+                    ctx.lineTo(750, 950);
+                    ctx.lineTo(50, 950);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            },
+            4: { // Polaroid Style
+                draw: (ctx, images) => {
+                    // Draw white backgrounds first
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(100, 100, 300, 350);
+                    ctx.fillRect(400, 400, 300, 350);
+                    ctx.fillRect(250, 700, 300, 350);
+
+                    // Then draw images
+                    ctx.drawImage(images[0], 125, 125, 250, 250);
+                    ctx.drawImage(images[1], 425, 425, 250, 250);
+                    ctx.drawImage(images[2], 275, 725, 250, 250);
+                },
+                frame: (ctx) => {
+                    // Polaroid shadows
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowOffsetX = 5;
+                    ctx.shadowOffsetY = 5;
+                }
+            }
+        };
+
+        // Modified generate collage function
+        generateBtn.addEventListener('click', () => {
+            if (capturedImages.length !== 3) {
+                alert("Please capture exactly 3 images first.");
+                return;
+            }
+
+            const selectedLayout = 4;
+            const layout = layoutOptions[selectedLayout];
+
+            const collageCanvas = document.createElement('canvas');
+            collageCanvas.width = 800;
+            collageCanvas.height = 1000;
+            const ctx = collageCanvas.getContext('2d');
+
+            // Draw white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, collageCanvas.width, collageCanvas.height);
+
+            // Load images
+            const images = capturedImages.map(src => {
+                const img = new Image();
+                img.src = src;
+                return img;
+            });
+
+            // Wait for all images to load
+            Promise.all(images.map(img => {
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                });
+            })).then(() => {
+                // Apply selected layout
+                layout.draw(ctx, images);
+
+                // Apply frame if exists
+                if (layout.frame) {
+                    layout.frame(ctx);
+                }
+
+                // Display the final collage
+                collage.src = collageCanvas.toDataURL('image/png');
+                collage.style.display = 'block';
+                downloadBtn.style.display = 'inline-block';
+                
+                // Store canvas for download
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.download = 'selfie-collage.png';
+                    link.href = collageCanvas.toDataURL('image/png');
+                    link.click();
+                };
+            });
+        });
+    </script>
+</body>
+</html>
