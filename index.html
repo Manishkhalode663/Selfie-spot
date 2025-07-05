@@ -135,23 +135,82 @@
             },
             4: { // Polaroid Style
                 draw: (ctx, images) => {
-                    // Draw white backgrounds first
+                    // Calculate dynamic positions and sizes
+                    const canvasWidth = ctx.canvas.width;
+                    const canvasHeight = ctx.canvas.height;
+                    
+                    // Polaroid dimensions and spacing
+                    const polaroidWidth = canvasWidth * 0.35;
+                    const polaroidHeight = polaroidWidth * 1.2;
+                    const imagePadding = polaroidWidth * 0.05;
+                    const imageWidth = polaroidWidth - (imagePadding * 2);
+                    const imageHeight = imageWidth;
+                    
+                    // Draw three polaroids with better positioning
+                    // Top polaroid (centered)
                     ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(100, 100, 300, 350);
-                    ctx.fillRect(400, 400, 300, 350);
-                    ctx.fillRect(250, 700, 300, 350);
-
-                    // Then draw images
-                    ctx.drawImage(images[0], 125, 125, 250, 250);
-                    ctx.drawImage(images[1], 425, 425, 250, 250);
-                    ctx.drawImage(images[2], 275, 725, 250, 250);
+                    ctx.fillRect(
+                        (canvasWidth/2) - (polaroidWidth/2), 
+                        50, 
+                        polaroidWidth, 
+                        polaroidHeight
+                    );
+                    ctx.drawImage(
+                        images[0], 
+                        (canvasWidth/2) - (imageWidth/2), 
+                        50 + imagePadding, 
+                        imageWidth, 
+                        imageHeight
+                    );
+                    
+                    // Bottom left polaroid
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(
+                        canvasWidth * 0.15, 
+                        canvasHeight - polaroidHeight - 50, 
+                        polaroidWidth, 
+                        polaroidHeight
+                    );
+                    ctx.drawImage(
+                        images[1], 
+                        canvasWidth * 0.15 + imagePadding, 
+                        canvasHeight - polaroidHeight - 50 + imagePadding, 
+                        imageWidth, 
+                        imageHeight
+                    );
+                    
+                    // Bottom right polaroid
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(
+                        canvasWidth * 0.65, 
+                        canvasHeight - polaroidHeight - 50, 
+                        polaroidWidth, 
+                        polaroidHeight
+                    );
+                    ctx.drawImage(
+                        images[2], 
+                        canvasWidth * 0.65 + imagePadding, 
+                        canvasHeight - polaroidHeight - 50 + imagePadding, 
+                        imageWidth, 
+                        imageHeight
+                    );
                 },
                 frame: (ctx) => {
-                    // Polaroid shadows
-                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                    ctx.shadowBlur = 15;
-                    ctx.shadowOffsetX = 5;
-                    ctx.shadowOffsetY = 5;
+                    // Enhanced polaroid shadows
+                    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowOffsetX = 8;
+                    ctx.shadowOffsetY = 8;
+                    
+                    // Add subtle vignette effect
+                    const gradient = ctx.createRadialGradient(
+                        ctx.canvas.width/2, ctx.canvas.height/2, 0,
+                        ctx.canvas.width/2, ctx.canvas.height/2, ctx.canvas.width/2
+                    );
+                    gradient.addColorStop(0, 'transparent');
+                    gradient.addColorStop(1, 'rgba(0,0,0,0.1)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 }
             }
         };
