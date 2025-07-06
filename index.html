@@ -1,273 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selfie Spot - Portrait Collage Maker</title>
-
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Selfie Camera</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .snap-yellow { background-color: #FFFC00; }
+        .snap-yellow-text { color: #FFFC00; }
+        .snap-dark { background-color: #1A1A1A; }
+        .snap-dark-text { color: #1A1A1A; }
+        .snap-shadow { box-shadow: 0 0 15px rgba(255, 252, 0, 0.5); }
+    </style>
 </head>
+<body class="bg-black">
 
-<body>
-    <h1>Selfie Spot</h1>
-    <p>Take 3 selfies to create your portrait collage</p>
+    <div class="min-h-screen flex flex-col">
+        <!-- Snapchat-style header -->
+        <header class="flex justify-between items-center p-4 bg-black border-b border-gray-800">
+            <button class="text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <h1 class="text-white font-bold text-xl snap-yellow-text">SNAP</h1>
+            <button class="text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+            </button>
+        </header>
 
-    <div class="camera-container">
-        <video id="video" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
+        <!-- Camera view -->
+        <div class="flex-1 relative">
+            <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
+            <div class="absolute inset-0 pointer-events-none border-4 border-yellow-400 opacity-30"></div>
+        </div>
+
+        <!-- Bottom controls -->
+        <div class="p-4 bg-black flex flex-col items-center">
+            <!-- Capture button -->
+            <button id="captureBtn" class="w-16 h-16 rounded-full bg-white border-4 border-yellow-400 flex items-center justify-center mb-4 snap-shadow">
+                <div class="w-12 h-12 rounded-full bg-white border-2 border-yellow-400"></div>
+            </button>
+
+            <!-- Preview area -->
+            <div id="previewContainer" class="w-full flex gap-2 overflow-x-auto py-2">
+                <!-- Preview images will appear here -->
+            </div>
+
+            <!-- Generate button -->
+            <button id="generateBtn" class="hidden mt-4 px-6 py-2 rounded-full bg-yellow-400 text-black font-bold">
+                CREATE POLAROID
+            </button>
+        </div>
     </div>
 
-    <button id="captureBtn">Capture Selfie</button>
-    <button id="resetBtn">Reset</button>
-
-    <div class="preview-container" id="previewContainer"></div>
-
-    <button id="generateBtn" disabled>Generate Collage</button>
-
-    <div class="collage-container">
-        <img id="collage" style="display: none;">
-    </div>
-
-    <button id="downloadBtn" style="display: none;">Download  </button>
+    <!-- Hidden canvas -->
+    <canvas id="canvas" class="hidden"></canvas>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const captureBtn = document.getElementById('captureBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const generateBtn = document.getElementById('generateBtn');
-        const previewContainer = document.getElementById('previewContainer');
-        const collage = document.getElementById('collage');
-
-        let capturedImages = [];
-
-        // Access camera
+        // Camera access code
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: true })
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
                 .then(stream => {
-                    video.srcObject = stream;
+                    document.getElementById('video').srcObject = stream;
                 })
                 .catch(error => {
-                    console.error("Camera access error:", error);
-                    alert("Could not access the camera. Please ensure you've granted camera permissions.");
+                    console.error("Camera error:", error);
                 });
         }
 
-        // Capture image
-        captureBtn.addEventListener('click', () => {
-            if (capturedImages.length >= 3) {
-                alert("You've already captured 3 images. Please reset to start over.");
+        // Capture functionality
+        const capturedImages = [];
+        const maxImages = 3;
+
+        document.getElementById('captureBtn').addEventListener('click', function() {
+            if (capturedImages.length >= maxImages) {
+                alert(`You can only capture ${maxImages} images.`);
                 return;
             }
 
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const imageData = canvas.toDataURL('image/png');
-            capturedImages.push(imageData);
-
-            // Display preview
+            
+            const imgData = canvas.toDataURL('image/png');
+            capturedImages.push(imgData);
+            
             const img = document.createElement('img');
-            img.src = imageData;
-            img.className = 'preview-image';
-            previewContainer.appendChild(img);
+            img.src = imgData;
+            img.className = 'w-16 h-16 rounded object-cover';
+            document.getElementById('previewContainer').appendChild(img);
 
-            // Enable generate button when 3 images are captured
-            if (capturedImages.length === 3) {
-                generateBtn.disabled = false;
+            if (capturedImages.length === maxImages) {
+                document.getElementById('generateBtn').classList.remove('hidden');
             }
         });
 
-        // Reset all images
-        resetBtn.addEventListener('click', () => {
-            capturedImages = [];
-            previewContainer.innerHTML = '';
-            collage.style.display = 'none';
-            generateBtn.disabled = true;
-        });
-
-        // Generate collage
-        // Layout options configuration
-        const layoutOptions = {
-            1: { // Portrait Layout
-                draw: (ctx, images) => {
-                    ctx.drawImage(images[0], 50, 50, 700, 400);
-                    ctx.drawImage(images[1], 150, 500, 250, 250);
-                    ctx.drawImage(images[2], 450, 500, 250, 250);
-                },
-                frame: (ctx) => {
-                    ctx.strokeStyle = '#0056b3';
-                    ctx.lineWidth = 15;
-                    ctx.strokeRect(25, 25, 750, 950);
-                }
-            },
-            2: { // Grid Layout
-                draw: (ctx, images) => {
-                    ctx.drawImage(images[0], 50, 50, 300, 300);
-                    ctx.drawImage(images[1], 450, 50, 300, 300);
-                    ctx.drawImage(images[2], 250, 400, 300, 300);
-                },
-                frame: (ctx) => {
-                    ctx.strokeStyle = '#ff9800';
-                    ctx.lineWidth = 10;
-                    ctx.strokeRect(40, 40, 720, 720);
-                }
-            },
-            3: { // Diagonal Layout
-                draw: (ctx, images) => {
-                    ctx.drawImage(images[0], 100, 100, 300, 300);
-                    ctx.drawImage(images[1], 300, 400, 300, 300);
-                    ctx.drawImage(images[2], 500, 700, 300, 300);
-                },
-                frame: (ctx) => {
-                    ctx.strokeStyle = '#4CAF50';
-                    ctx.lineWidth = 8;
-                    ctx.beginPath();
-                    ctx.moveTo(50, 50);
-                    ctx.lineTo(750, 50);
-                    ctx.lineTo(750, 950);
-                    ctx.lineTo(50, 950);
-                    ctx.closePath();
-                    ctx.stroke();
-                }
-            },
-            4: { // Polaroid Style
-                draw: (ctx, images) => {
-                    // Calculate dynamic positions and sizes
-                    const canvasWidth = ctx.canvas.width;
-                    const canvasHeight = ctx.canvas.height;
-                    
-                    // Polaroid dimensions and spacing
-                    const polaroidWidth = canvasWidth * 0.35;
-                    const polaroidHeight = polaroidWidth * 1.2;
-                    const imagePadding = polaroidWidth * 0.05;
-                    const imageWidth = polaroidWidth - (imagePadding * 2);
-                    const imageHeight = imageWidth;
-                    
-                    // Draw three polaroids with better positioning
-                    // Top polaroid (centered)
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(
-                        (canvasWidth/2) - (polaroidWidth/2), 
-                        50, 
-                        polaroidWidth, 
-                        polaroidHeight
-                    );
-                    ctx.drawImage(
-                        images[0], 
-                        (canvasWidth/2) - (imageWidth/2), 
-                        50 + imagePadding, 
-                        imageWidth, 
-                        imageHeight
-                    );
-                    
-                    // Bottom left polaroid
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(
-                        canvasWidth * 0.15, 
-                        canvasHeight - polaroidHeight - 50, 
-                        polaroidWidth, 
-                        polaroidHeight
-                    );
-                    ctx.drawImage(
-                        images[1], 
-                        canvasWidth * 0.15 + imagePadding, 
-                        canvasHeight - polaroidHeight - 50 + imagePadding, 
-                        imageWidth, 
-                        imageHeight
-                    );
-                    
-                    // Bottom right polaroid
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(
-                        canvasWidth * 0.65, 
-                        canvasHeight - polaroidHeight - 50, 
-                        polaroidWidth, 
-                        polaroidHeight
-                    );
-                    ctx.drawImage(
-                        images[2], 
-                        canvasWidth * 0.65 + imagePadding, 
-                        canvasHeight - polaroidHeight - 50 + imagePadding, 
-                        imageWidth, 
-                        imageHeight
-                    );
-                },
-                frame: (ctx) => {
-                    // Enhanced polaroid shadows
-                    ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                    ctx.shadowBlur = 20;
-                    ctx.shadowOffsetX = 8;
-                    ctx.shadowOffsetY = 8;
-                    
-                    // Add subtle vignette effect
-                    const gradient = ctx.createRadialGradient(
-                        ctx.canvas.width/2, ctx.canvas.height/2, 0,
-                        ctx.canvas.width/2, ctx.canvas.height/2, ctx.canvas.width/2
-                    );
-                    gradient.addColorStop(0, 'transparent');
-                    gradient.addColorStop(1, 'rgba(0,0,0,0.1)');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                }
-            }
-        };
-
-        // Modified generate collage function
-        generateBtn.addEventListener('click', () => {
-            if (capturedImages.length !== 3) {
-                alert("Please capture exactly 3 images first.");
-                return;
-            }
-
-            const selectedLayout = 4;
-            const layout = layoutOptions[selectedLayout];
-
+        document.getElementById('generateBtn').addEventListener('click', function() {
             const collageCanvas = document.createElement('canvas');
             collageCanvas.width = 800;
             collageCanvas.height = 1000;
             const ctx = collageCanvas.getContext('2d');
-
+            
             // Draw white background
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, collageCanvas.width, collageCanvas.height);
-
-            // Load images
-            const images = capturedImages.map(src => {
-                const img = new Image();
-                img.src = src;
-                return img;
-            });
-
-            // Wait for all images to load
-            Promise.all(images.map(img => {
-                return new Promise(resolve => {
-                    img.onload = resolve;
-                });
-            })).then(() => {
-                // Apply selected layout
-                layout.draw(ctx, images);
-
-                // Apply frame if exists
-                if (layout.frame) {
-                    layout.frame(ctx);
-                }
-
-                // Display the final collage
-                collage.src = collageCanvas.toDataURL('image/png');
-                collage.style.display = 'block';
-                downloadBtn.style.display = 'inline-block';
+            
+            // Draw polaroid frames with improved styling
+            const polaroidWidth = 320;
+            const polaroidHeight = 380;
+            const imageWidth = 280;
+            const imageHeight = 280;
+            const borderWidth = 20;
+            
+            // Add slight rotation for more natural look
+            const rotations = [-8, 5, -3];
+            const positions = [
+                { x: 220, y: 80 },  // Top center, slightly left
+                { x: 80, y: 480 },  // Bottom left
+                { x: 380, y: 420 }  // Bottom right, overlapping
+            ];
+            
+            // Draw polaroids from back to front
+            for(let i = 0; i < 3; i++) {
+                ctx.save();
                 
-                // Store canvas for download
-                downloadBtn.onclick = () => {
-                    const link = document.createElement('a');
-                    link.download = 'selfie-collage.png';
-                    link.href = collageCanvas.toDataURL('image/png');
-                    link.click();
-                };
-            });
+                // Apply rotation from center of polaroid
+                ctx.translate(
+                    positions[i].x + polaroidWidth/2,
+                    positions[i].y + polaroidHeight/2
+                );
+                ctx.rotate(rotations[i] * Math.PI / 180);
+                ctx.translate(
+                    -(positions[i].x + polaroidWidth/2),
+                    -(positions[i].y + polaroidHeight/2)
+                );
+                
+                // Draw polaroid frame with shadow
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 8;
+                ctx.shadowOffsetY = 8;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(positions[i].x, positions[i].y, polaroidWidth, polaroidHeight);
+                
+                // Reset shadow for image
+                ctx.shadowColor = 'none';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                const img = new Image();
+                img.onload = (function(index) {
+                    return function() {
+                        // Calculate aspect ratio to prevent stretching
+                        const aspectRatio = this.width / this.height;
+                        let drawWidth = imageWidth;
+                        let drawHeight = imageHeight;
+                        
+                        if (aspectRatio > 1) {
+                            drawHeight = imageWidth / aspectRatio;
+                        } else {
+                            drawWidth = imageHeight * aspectRatio;
+                        }
+                        
+                        // Center image within polaroid frame
+                        const x = positions[index].x + borderWidth + (imageWidth - drawWidth) / 2;
+                        const y = positions[index].y + borderWidth + (imageHeight - drawHeight) / 2;
+                        
+                        ctx.drawImage(this, x, y, drawWidth, drawHeight);
+                        
+                        // If last image, create final collage
+                        if(index === 2) {
+                            const collageImg = new Image();
+                            collageImg.src = collageCanvas.toDataURL('image/png');
+                            collageImg.className = 'w-full rounded-lg shadow-lg';
+                            
+                            const preview = document.getElementById('previewContainer');
+                            preview.innerHTML = '';
+                            preview.appendChild(collageImg);
+                        }
+                    };
+                })(i);
+                
+                img.src = capturedImages[i];
+                ctx.restore();
+            }
         });
     </script>
 </body>
